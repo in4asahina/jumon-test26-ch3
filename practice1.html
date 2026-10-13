@@ -631,7 +631,7 @@ function showAdmin(){
       '<p class="note" id="timeMsg">変更はこの画面にすぐ反映されます。生徒に配るファイルに反映するには、変更したあと下の「配布用HTMLを書き出す」で保存しなおします。初期値は本番用5分・練習用50分、経過時間はどちらも表示しません。</p></section>' +
     '<section><h3>問題ファイル（Excel）を読み込む</h3><div class="drop" id="drop"><p>問題集のExcelファイル（.xlsx / .xlsm）をここにドロップするか、</p><p><input type="file" id="file" accept=".xlsx,.xlsm,.xls"></p></div><p class="note" id="loadMsg">読み込んだ問題はこの画面にだけ反映されます。生徒に配るには、下の「配布用HTMLを書き出す」を使います。Excelの読み込みにはインターネット接続が必要です。</p></section>' +
     '<section><h3>配布用HTMLを書き出す</h3><p>いまの問題を埋め込んだHTMLファイルを保存します。生徒はこのファイルをブラウザで開くだけで受験できます（インターネット接続は不要）。</p><div style="display:grid;gap:4px;margin-bottom:6px">' + ['main','term','calc'].map(function(m){ return '<label><input type="radio" name="expMode" value="' + m + '"' + (m === mode() ? ' checked' : '') + '> ' + MODE_JA[m] + '：' + esc(titleFor(m)) + '<br><span class="note">ファイル名：' + esc(fileNameFor(m)) + '</span></label>'; }).join('') + '</div><div><button type="button" class="pbtn primary" id="exportBtn">配布用HTMLを書き出す</button></div><p class="note">本番用は緑、練習用（用語問題）は青、練習用（プログラミング問題）は赤の画面になります。練習用（用語問題）は関連用語シートの問題だけ、練習用（プログラミング問題）はグループ9（論理回路）・10（プログラム）の問題だけから出題します。</p><p class="note">保存先を確かめる画面が出たら「保存」を選びます。</p></section>' +
-    '<section><h3>この端末の受験記録</h3><p>' + hist.length + ' 件</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="pbtn" id="csvBtn"' + (hist.length ? '' : ' disabled') + '>CSVで保存</button><button type="button" class="pbtn danger" id="clearBtn"' + (hist.length ? '' : ' disabled') + '>記録を消す</button><button type="button" class="pbtn danger" id="countBtn"' + (countKeys().length ? '' : ' disabled') + '>受験回数をリセット</button></div><p class="note">受験回数（「○回目の受験」）は、この端末に、ユーザー名ごとに数えています。いま ' + countKeys().length + ' 人分あります。リセットすると、全員が次の受験から「1回目」にもどります。</p></section>' +
+    '<section><h3>この端末の受験記録</h3><p>' + hist.length + ' 件</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="pbtn" id="csvBtn"' + (hist.length ? '' : ' disabled') + '>CSVで保存</button><button type="button" class="pbtn danger" id="clearBtn"' + (hist.length || lsGet('jt:user', null) ? '' : ' disabled') + '>記録を消す</button><button type="button" class="pbtn danger" id="countBtn"' + (countKeys().length ? '' : ' disabled') + '>受験回数をリセット</button></div><p class="note">「記録を消す」は、受験記録と、この端末に覚えているユーザー名・氏名を消します（受験回数は消えません）。</p><p class="note">受験回数（「○回目の受験」）は、この端末に、ユーザー名ごとに数えています。いま ' + countKeys().length + ' 人分あります。リセットすると、全員が次の受験から「1回目」にもどります。</p></section>' +
     '</div><div class="ft"><button type="button" class="pbtn" id="admClose" data-autofocus>閉じる</button></div></div>');
   $('admClose').onclick = function(){ closeModal(); };
   $('timeForm').addEventListener('submit', function(e){
@@ -653,7 +653,12 @@ function showAdmin(){
   $('csvBtn').onclick = function(){ var h = lsGet('jt:results', []); downloadText(toCsv([resultHeader()].concat(h)), testTitle() + '_受験記録.csv', 'text/csv'); };
   $('clearBtn').onclick = function(){
     var b = $('clearBtn');
-    if (b.dataset.armed) { lsSet('jt:results', []); showAdmin(); }
+    if (b.dataset.armed) {
+      lsSet('jt:results', []);
+      try { localStorage.removeItem('jt:user'); } catch(e) {}      // 覚えているユーザー名・氏名も消す
+      if (state === 'ready') { $('user').value = ''; $('name').value = ''; fitText($('user')); fitText($('name')); }
+      showAdmin(); $('loadMsg').textContent = '受験記録と、ユーザー名・氏名の記録を消しました。';
+    }
     else { b.dataset.armed = '1'; b.textContent = 'もう一度押すと消します'; }
   };
   $('countBtn').onclick = function(){
